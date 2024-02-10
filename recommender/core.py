@@ -325,119 +325,119 @@ class OccupationData:
 
 class RecommenderSystem:
     """
-    RecommenderSystem class provides recommendations for ions and sites based on distance in an embedding space.
+    RecommenderSystem class provides recommendations for atoms and sites based on distance in an embedding space.
 
-    This system leverages word embeddings for ions and sites to measure their similarity. Recommendations are made 
+    This system leverages word embeddings for atoms and sites to measure their similarity. Recommendations are made 
     based on these similarity measures, with a certain threshold distance indicating a meaningful recommendation.
 
     Attributes:
-    occupation_data (OccupationData): An instance of OccupationData containing the occupation states of ions and sites.
-    distance_threshold (float): The distance threshold for recommendations. Only ions or sites within this threshold 
+    occupation_data (OccupationData): An instance of OccupationData containing the occupation states of atoms and sites.
+    distance_threshold (float): The distance threshold for recommendations. Only atoms or sites within this threshold 
                                 distance are considered as potential recommendations.
-    embedding (KeyedVectors): The general word embeddings of ions and sites.
-    ions_embedding (KeyedVectors): Word embeddings specifically for ions.
+    embedding (KeyedVectors): The general word embeddings of atoms and sites.
+    atoms_embedding (KeyedVectors): Word embeddings specifically for atoms.
     sites_embedding (KeyedVectors): Word embeddings specifically for sites.
-    ion_forbidden_list (list): A list of ions which are not to be recommended.
+    atom_forbidden_list (list): A list of atoms which are not to be recommended.
     """
 
     def __init__(self, occupation_data: OccupationData,
                  embedding: KeyedVectors,
                  distance_threshold: float,
-                 ion_forbidden_list: list):
+                 atom_forbidden_list: list):
         """
         Parameters
         ----------
         occupation_data : OccupationData
-            The occupation data containing occupation states of ions and sites.
+            The occupation data containing occupation states of atoms and sites.
         embedding : KeyedVectors
-            The general word embeddings for ions and sites.
+            The general word embeddings for atoms and sites.
         distance_threshold : float
-            The distance threshold for recommendations. Only ions or sites within this threshold distance are considered 
+            The distance threshold for recommendations. Only atoms or sites within this threshold distance are considered 
             as potential recommendations.
-        ion_forbidden_list : list
-            A list of ions which are not to be recommended.
+        atom_forbidden_list : list
+            A list of atoms which are not to be recommended.
         """
         self.occupation_data = occupation_data
         self.distance_threshold = distance_threshold
         self.embedding = embedding
-        self.ion_forbidden_list = ion_forbidden_list
+        self.atom_forbidden_list = atom_forbidden_list
 
-        ions, ions_wv = [], []
+        atoms, atoms_wv = [], []
         sites, sites_wv = [], []
         for node_label in embedding.index_to_key:
             if len(node_label) > 2:
                 sites.append(node_label)
                 sites_wv.append(embedding[node_label])
             else:
-                ions.append(node_label)
-                ions_wv.append(embedding[node_label])
+                atoms.append(node_label)
+                atoms_wv.append(embedding[node_label])
 
-        ions_embedding = KeyedVectors(vector_size=embedding.vector_size)
-        ions_embedding.add_vectors(ions, ions_wv)
-        self.ions_embedding = ions_embedding
+        atoms_embedding = KeyedVectors(vector_size=embedding.vector_size)
+        atoms_embedding.add_vectors(atoms, atoms_wv)
+        self.atoms_embedding = atoms_embedding
 
         sites_embedding = KeyedVectors(vector_size=embedding.vector_size)
         sites_embedding.add_vectors(sites, sites_wv)
         self.sites_embedding = sites_embedding
 
-    def check_recommendation_novelty(self, ion: str, site_label: str) -> bool:
+    def check_recommendation_novelty(self, atom: str, site_label: str) -> bool:
         """
-        Check whether a given ion has ever occupied a particular site in an anonymous motif (AM).
+        Check whether a given atom has ever occupied a particular site in an anonymous motif (AM).
 
         Parameters
         ----------
-        ion : str
-            The label of the ion to be checked.
+        atom : str
+            The label of the atom to be checked.
         site_label : str
-            The label of the site where the ion's presence is being checked.
+            The label of the site where the atom's presence is being checked.
 
         Returns
         -------
         bool
-            True if the ion has never occupied the site in the anonymous motif (AM), indicating a novel recommendation. False otherwise.
+            True if the atom has never occupied the site in the anonymous motif (AM), indicating a novel recommendation. False otherwise.
         """
         AM_label = site_label.split('[')[0]
         for AM in self.occupation_data.AM_list:
             if AM['AM_label'] == AM_label:
                 for site in AM['sites']:
                     if site['label'] == site_label:
-                        if site['ion_distribution'][ion] == 0:
+                        if site['ion_distribution'][atom] == 0:
                             return True
                         else:
                             return False
 
-    def get_recommendation_for_ion(self, ion: str, top_n: int = None, only_new: bool = False, local_geometry: tuple = None) -> list[tuple[str, AMSite, bool]]:
+    def get_recommendation_for_atom(self, atom: str, top_n: int = None, only_new: bool = False, local_geometry: tuple = None) -> list[tuple[str, AMSite, bool]]:
         """
-        Generate a list of site recommendations for a given ion.
+        Generate a list of site recommendations for a given atom.
 
-        The method evaluates the similarity between the ion and available sites using embeddings, returning a list 
+        The method evaluates the similarity between the atom and available sites using embeddings, returning a list 
         of recommended sites. The list is sorted by ascending order of distance, which measures the dissimilarity 
-        between the ion and site embeddings.
+        between the atom and site embeddings.
 
         Parameters
         ----------
-        ion : str
-            The ion for which site recommendations are to be generated.
+        atom : str
+            The atom for which site recommendations are to be generated.
         top_n: int 
             The size limit of the recommendations list.
         only_new: bool
-            Only returns recommendation for new ion-site occupations.
+            Only returns recommendation for new atom-site occupations.
 
         Returns
         -------
         list[tuple[str, AMSite, bool]]
-            Each tuple consists of a recommended site label, the distance of the site from the ion in the embedding 
+            Each tuple consists of a recommended site label, the distance of the site from the atom in the embedding 
             space, and a boolean indicating whether the recommendation is novel.
         """
-        if ion not in self.ions_embedding.index_to_key:
-            raise ValueError(f"Ion {ion} not found in the embedding index.")
+        if atom not in self.atoms_embedding.index_to_key:
+            raise ValueError(f"Atom {atom} not found in the embedding index.")
 
         recommendation_list = []
         for site in self.sites_embedding.index_to_key:
-            dist = self.embedding.distance(ion, site)
+            dist = self.embedding.distance(atom, site)
             if dist < self.distance_threshold:
                 recommendation_novelty = self.check_recommendation_novelty(
-                    ion, site)
+                    atom, site)
                 recommendation_list.append(
                     (site, dist, recommendation_novelty))
 
@@ -468,39 +468,39 @@ class RecommenderSystem:
 
     def get_recommendation_for_site(self, site: str, top_n: int = None, only_new: bool = False) -> list[tuple[str, float, bool]]:
         """
-        Generate a list of ion recommendations for a given site.
+        Generate a list of atom recommendations for a given site.
 
-        The method evaluates the similarity between the site and available ions using embeddings, returning a list 
-        of recommended ions. The list is sorted by ascending order of distance, which measures the dissimilarity 
-        between the ion and site embeddings.
+        The method evaluates the similarity between the site and available atoms using embeddings, returning a list 
+        of recommended atoms. The list is sorted by ascending order of distance, which measures the dissimilarity 
+        between the atom and site embeddings.
 
         Parameters
         ----------
         site : str
-            The site for which ion recommendations are to be generated.
+            The site for which atom recommendations are to be generated.
         top_n: int 
             The size limit of the recommendations list.
         only_new: bool
-            Only returns recommendation for new ion-site occupations.
+            Only returns recommendation for new atom-site occupations.
 
         Returns
         -------
         list[tuple[str, float, bool]]
-            Each tuple consists of a recommended ion label, the distance of the ion from the site in the embedding 
+            Each tuple consists of a recommended atom label, the distance of the atom from the site in the embedding 
             space, and a boolean indicating whether the recommendation is novel.
         """
         if site not in self.sites_embedding.index_to_key:
             raise ValueError(f"Site {site} not found in the embedding index.")
 
         recommendation_list = []
-        for ion in self.ions_embedding.index_to_key:
-            if ion in self.ion_forbidden_list:
+        for atom in self.atoms_embedding.index_to_key:
+            if atom in self.atom_forbidden_list:
                 continue
-            dist = self.embedding.distance(site, ion)
+            dist = self.embedding.distance(site, atom)
             if dist < self.distance_threshold:
                 recommendation_novelty = self.check_recommendation_novelty(
-                    ion, site)
-                recommendation_list.append((ion, dist, recommendation_novelty))
+                    atom, site)
+                recommendation_list.append((atom, dist, recommendation_novelty))
 
         recommendation_list.sort(key=lambda x: x[1])
 
@@ -515,23 +515,23 @@ class RecommenderSystem:
 
     def get_recommendation_for_AM(self, AM: AnonymousMotif) -> dict[AMSite, list[tuple[str, float, bool]]]:
         """
-        Generate a dictionary of ion recommendations for each site of an Anonymous Motif (AM).
+        Generate a dictionary of atom recommendations for each site of an Anonymous Motif (AM).
 
-        The method evaluates the similarity between the sites of the AM and available ions using embeddings, 
-        returning a dictionary where keys are AMSites and values are lists of recommended ions for each site. 
-        Each list is sorted by ascending order of distance, which measures the dissimilarity between the ion 
+        The method evaluates the similarity between the sites of the AM and available atoms using embeddings, 
+        returning a dictionary where keys are AMSites and values are lists of recommended atoms for each site. 
+        Each list is sorted by ascending order of distance, which measures the dissimilarity between the atom 
         and site embeddings.
 
         Parameters
         ----------
         AM : AnonymousMotif
-            The Anonymous Motif (AM) for which ion recommendations are to be generated for each site.
+            The Anonymous Motif (AM) for which atom recommendations are to be generated for each site.
 
         Returns
         -------
         dict[AMSite, list[tuple[str, float, bool]]]
-            A dictionary where each key-value pair consists of an AMSite and a corresponding list of recommended ions.
-            Each list item is a tuple consisting of a recommended ion label, the distance of the ion from the site 
+            A dictionary where each key-value pair consists of an AMSite and a corresponding list of recommended atoms.
+            Each list item is a tuple consisting of a recommended atom label, the distance of the atom from the site 
             in the embedding space, and a boolean indicating whether the recommendation is novel.
         """
         recommendations = dict()
@@ -569,7 +569,7 @@ class RecommenderSystem:
         assert all([ periodic_table.ElementBase.is_valid_symbol(el) for el in elements]), "One or more of the input elements are not valid."
 
         # Gets top_n recommendations for each atomic element in compound
-        recommendations_atoms = { atom:self.get_recommendation_for_ion(atom, top_n=top_n, only_new=False) for atom in elements }
+        recommendations_atoms = { atom:self.get_recommendation_for_atom(atom, top_n=top_n, only_new=False) for atom in elements }
 
         # Anonymous Motifs recommended simultaneously for all the elements
         AMlabels = { item[0]:[ rec[0].AM_label for rec in item[1] ] for item in recommendations_atoms.items() }
