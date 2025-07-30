@@ -576,7 +576,7 @@ class RecommenderSystem:
         AMs_intersect = list(set.intersection(*map(set,AMlabels.values())))
 
         # Dictionary that will collect the recommended compounds
-        recommendations_compounds={'formula':[],'AM':[],'AM_label':[],'atom_AMsites':[],'oxidation_states':[],'sum_SiteAtom_dists':[],'novelty_fraction':[]}
+        recommendations_compounds={'formula':[],'AM':[],'AM_label':[],'atom_AMsites':[],'oxidation_states':[],'sum_SiteAtom_dists':[],'mean_SiteAtom_dists':[],'novelty_fraction':[]}
 
         # Loops over the labels (corresponding to Anonymous Motifs for which there are recommendations for all the atoms in the compound
         for label in AMs_intersect:
@@ -611,13 +611,14 @@ class RecommenderSystem:
                     formula, oxi_states=list_to_formula(compound, AM) # Reduced formula and oxidation states
                     if not all([ e in formula for e in elements]): # Ignores compounds lacking at least one instance of elements
                         continue
-                    # Total atom-site distance and novelty fraction
+                    # Total atom-site distance, mean atom-site distance and novelty fraction
                     total_dist=0
                     novelty_fraction=0
                     for ix,atom in enumerate(compound):
                         site=(AM.sites)[ix]
                         total_dist+=sum([ rec[1] for rec in recommendations_atoms[atom] if site==rec[0] ])
                         novelty_fraction+=sum([ rec[2] for rec in recommendations_atoms[atom] if site==rec[0] ])
+                    mean_dist=total_dist/(ix+1)
                     novelty_fraction/=len(AM.sites)
 
                     recommendations_compounds['formula'].append(formula)
@@ -626,6 +627,7 @@ class RecommenderSystem:
                     recommendations_compounds['atom_AMsites'].append(compound)
                     recommendations_compounds['oxidation_states'].append(oxi_states)
                     recommendations_compounds['sum_SiteAtom_dists'].append(total_dist)
+                    recommendations_compounds['mean_SiteAtom_dists'].append(mean_dist)
                     recommendations_compounds['novelty_fraction'].append(novelty_fraction)
 
         return recommendations_compounds
